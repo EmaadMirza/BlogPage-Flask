@@ -12650,6 +12650,24 @@ header.masthead .post-heading .meta a {
   font-size: 13px;
 }
 
+.comment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.35rem;
+}
+
+.comment-author {
+  font-weight: 600;
+}
+
+.comment-date {
+  color: #6c757d;
+  font-family: Arial, sans-serif;
+  font-size: 0.85rem;
+}
+
 /* Flash Message Styling */
 .flash {
   color: #ee6f57;

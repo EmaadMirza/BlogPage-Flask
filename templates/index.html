@@ -41,9 +41,9 @@
           on {{post.date}}
           · 📖 {{ (post.body | striptags | wordcount / 200) | round(method='ceil') | int }} min read
           <!-- TODO: Only show delete button if user id is 1 (admin user) -->
-          {%if current_user.id == 1%}
+          {% if current_user.is_authenticated and current_user.id == 1 %}
           <a class="text-danger" title="Delete Post" href="{{url_for('delete_post', post_id=post.id) }}">✘</a>
-          {%endif%}
+          {% endif %}
         </p>
       </div>
       <!-- Divider-->
@@ -52,11 +52,11 @@
 
       <!-- New Post -->
       <!-- TODO: Only show Create Post button if user id is 1 (admin user) -->
-      {%if current_user.id == 1%}
+      {% if current_user.is_authenticated and current_user.id == 1 %}
       <div class="d-flex justify-content-end mb-4">
         <a class="btn btn-primary float-right" href="{{url_for('add_new_post')}}">Create New Post</a>
       </div>
-      {%endif%}
+      {% endif %}
 
       <!-- Pager-->
       <div class="d-flex justify-content-between mb-4">

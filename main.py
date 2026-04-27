@@ -44,8 +44,9 @@ def admin_only(f):
 # CREATE DATABASE
 class Base(DeclarativeBase):
     pass
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DB_URI",'sqlite:///posts.db')
-db = SQLAlchemy(model_class=Base)
+#app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DB_URI",'sqlite:///posts.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("SQLALCHEMY_DATABASE_URI", "sqlite:///posts.db")
+db = SQLAlchemy(model_class=Base, engine_options={"pool_pre_ping": True})
 db.init_app(app)
 
 
@@ -82,6 +83,7 @@ class Comment(db.Model):
     __tablename__="comments"
     id:Mapped[int]=mapped_column(Integer,primary_key=True)
     comment:Mapped[str]=mapped_column(Text,nullable=False)
+    date:Mapped[str]=mapped_column(String(250), nullable=False)
     author_id:Mapped[int]=mapped_column(Integer,db.ForeignKey("users.id"))
     author=relationship("User",back_populates="comments")
     post_id:Mapped[int]=mapped_column(Integer,db.ForeignKey("blog_posts.id"))
@@ -159,6 +161,7 @@ def show_post(post_id):
         clean_comment = bleach.clean(form.comment.data, tags=['p', 'strong', 'em', 'a', 'b', 'i', 'u'])
         new_comment=Comment(
             comment=clean_comment,
+            date=date.today().strftime("%B %d, %Y"),
             author=current_user,
             post=requested_post
         )
@@ -197,7 +200,6 @@ def edit_post(post_id):
         title=post.title,
         subtitle=post.subtitle,
         img_url=post.img_url,
-        author=post.author,
         body=post.body
     )
     if edit_form.validate_on_submit():
@@ -240,32 +242,36 @@ def about():
 
 @app.route("/contact", methods=["GET", "POST"])
 def contact():
+    msg_sent = False
     if request.method == "POST":
         name = request.form.get("name")
         email = request.form.get("email")
         phone = request.form.get("phone")
         message = request.form.get("message")
         
-        # Sending email using smtplib
+        
         email_address = os.environ.get("EMAIL_ADDRESS")
         email_password = os.environ.get("EMAIL_PASSWORD")
         if email_address and email_password:
             try:
                 with smtplib.SMTP("smtp.gmail.com", 587) as connection:
+                    connection.ehlo()
                     connection.starttls()
-                    connection.login(user=email_address, password=email_password)
+                    connection.ehlo()
+                    connection.login(email_address, email_password)
                     connection.sendmail(
                         from_addr=email_address,
                         to_addrs=email_address,
                         msg=f"Subject:New Message from {name}\n\nName: {name}\nEmail: {email}\nPhone: {phone}\nMessage: {message}"
                     )
                 flash("Successfully sent your message!", "success")
+                msg_sent = True
             except Exception as e:
                 flash(f"Error sending message: {e}", "danger")
         else:
             flash("Email credentials not configured in .env", "danger")
-        return redirect(url_for("contact"))
-    return render_template("contact.html")
+        return render_template("contact.html", msg_sent=msg_sent)
+    return render_template("contact.html", msg_sent=msg_sent)
 
 
 if __name__ == "__main__":
