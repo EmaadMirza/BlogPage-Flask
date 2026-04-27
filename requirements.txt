@@ -11,3 +11,5 @@ gunicorn==25.1.0
 psycopg-binary==3.3.3
 python-dotenv
 bleach
+gunicorn==21.2.0
+psycopg2-binary
