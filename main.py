@@ -63,7 +63,7 @@ class BlogPost(db.Model):
 
     author_id: Mapped[int] = mapped_column(Integer, db.ForeignKey("users.id"))
     author=relationship("User",back_populates="posts")
-    comments=relationship("Comment",back_populates="post")
+    comments=relationship("Comment",back_populates="post",cascade="all, delete-orphan")
 
 
     # TODO: Create a User table for all your registered users. 
