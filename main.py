@@ -32,6 +32,7 @@ def inject_now():
 # TODO: Configure Flask-Login
 login_manager=LoginManager()
 login_manager.init_app(app)
+login_manager.login_view = 'login'
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -49,9 +50,19 @@ def admin_only(f):
 # CREATE DATABASE
 class Base(DeclarativeBase):
     pass
-#app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DB_URI",'sqlite:///posts.db')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("SQLALCHEMY_DATABASE_URI", "sqlite:///posts.db")
-db = SQLAlchemy(model_class=Base, engine_options={"pool_pre_ping": True})
+
+# Use PostgreSQL on Render, fallback to SQLite for local development
+database_url = os.environ.get("DATABASE_URL", "sqlite:///posts.db")
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://")
+
+# Add SSL mode for Render PostgreSQL
+if "postgresql" in database_url:
+    database_url = database_url + "?sslmode=require"
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(model_class=Base, engine_options={"pool_pre_ping": True, "pool_recycle": 300})
 db.init_app(app)
 
 
@@ -281,3 +292,15 @@ def contact():
 
 if __name__ == "__main__":
     app.run(debug=False, port=5002)
+
+
+# Error handlers for debugging
+@app.errorhandler(404)
+def not_found(error):
+    return render_template('404.html'), 404
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return render_template('500.html'), 500
