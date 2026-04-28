@@ -1,5 +1,5 @@
 from flask import request
-from datetime import date
+from datetime import date, datetime
 from flask import Flask, abort, render_template, redirect, url_for, flash
 from flask_bootstrap import Bootstrap5
 from flask_ckeditor import CKEditor
@@ -23,6 +23,11 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("FLASK_KEY")
 ckeditor = CKEditor(app)
 Bootstrap5(app)
+
+# Add context processor to make 'now' available in all templates
+@app.context_processor
+def inject_now():
+    return {'now': datetime.now()}
 
 # TODO: Configure Flask-Login
 login_manager=LoginManager()
