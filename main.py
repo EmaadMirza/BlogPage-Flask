@@ -288,11 +288,13 @@ def contact():
                     connection.starttls()
                     connection.ehlo()
                     connection.login(email_address, email_password)
-                    connection.sendmail(
-                        from_addr=email_address,
-                        to_addrs=email_address,
-                        msg=f"Subject:New Message from {name}\n\nName: {name}\nEmail: {email}\nPhone: {phone}\nMessage: {message}"
-                    )
+                    from email.message import EmailMessage
+                    em = EmailMessage()
+                    em['Subject'] = f"New Message from {name}"
+                    em['From'] = email_address
+                    em['To'] = email_address
+                    em.set_content(f"Name: {name}\nEmail: {email}\nPhone: {phone}\nMessage: {message}")
+                    connection.send_message(em)
                 flash("Successfully sent your message!", "success")
                 msg_sent = True
             except Exception as e:
