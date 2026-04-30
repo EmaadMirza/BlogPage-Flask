@@ -55,7 +55,7 @@ class Base(DeclarativeBase):
 database_url = os.environ.get("DATABASE_URL", "sqlite:///posts.db")
 
 if database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql://")
+    database_url = database_url.replace("postgres://", "postgresql+psycopg://")
 
 # Add SSL mode for Render PostgreSQL (avoid duplicate query parameters)
 if "postgresql" in database_url and "?" not in database_url:
