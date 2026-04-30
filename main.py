@@ -53,16 +53,25 @@ class Base(DeclarativeBase):
 
 # Use PostgreSQL on Render, fallback to SQLite for local development
 database_url = os.environ.get("DATABASE_URL", "sqlite:///posts.db")
+
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://")
 
-# Add SSL mode for Render PostgreSQL
-if "postgresql" in database_url:
+# Add SSL mode for Render PostgreSQL (avoid duplicate query parameters)
+if "postgresql" in database_url and "?" not in database_url:
     database_url = database_url + "?sslmode=require"
+elif "postgresql" in database_url and "?" in database_url:
+    database_url = database_url + "&sslmode=require"
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(model_class=Base, engine_options={"pool_pre_ping": True, "pool_recycle": 300})
+app.config['SQLALCHEMY_ECHO'] = False
+
+db = SQLAlchemy(model_class=Base, engine_options={
+    "pool_pre_ping": True, 
+    "pool_recycle": 300,
+    "connect_args": {"connect_timeout": 10} if "postgresql" in database_url else {}
+})
 db.init_app(app)
 
 
@@ -105,8 +114,12 @@ class Comment(db.Model):
     post_id:Mapped[int]=mapped_column(Integer,db.ForeignKey("blog_posts.id"))
     post=relationship("BlogPost",back_populates="comments")
 
-with app.app_context():
-    db.create_all()
+# Initialize database after models are defined
+try:
+    with app.app_context():
+        db.create_all()
+except Exception as e:
+    print(f"Database initialization error: {e}")
 
 
 # TODO: Use Werkzeug to hash the user's password when creating a new user.
@@ -297,10 +310,19 @@ if __name__ == "__main__":
 # Error handlers for debugging
 @app.errorhandler(404)
 def not_found(error):
-    return render_template('404.html'), 404
+    try:
+        return render_template('404.html'), 404
+    except:
+        return "<h1>404 - Page Not Found</h1>", 404
 
 
 @app.errorhandler(500)
 def internal_error(error):
-    db.session.rollback()
-    return render_template('500.html'), 500
+    try:
+        db.session.rollback()
+    except:
+        pass
+    try:
+        return render_template('500.html'), 500
+    except:
+        return "<h1>500 - Internal Server Error</h1>", 500
