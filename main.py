@@ -55,16 +55,20 @@ class Base(DeclarativeBase):
     pass
 
 # Use PostgreSQL on Render, fallback to SQLite for local development
-database_url = os.environ.get("DATABASE_URL", "sqlite:///posts.db")
+database_url = os.environ.get("SQLALCHEMY_DATABASE_URI") or os.environ.get("DATABASE_URL") or "sqlite:///posts.db"
 
+# Handle old postgres:// and postgresql:// prefixes and convert to modern postgresql+psycopg://
 if database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql+psycopg://")
+    database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
+elif database_url.startswith("postgresql://") and "+psycopg" not in database_url:
+    database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
 
-# Add SSL mode for Render PostgreSQL (avoid duplicate query parameters)
-if "postgresql" in database_url and "?" not in database_url:
-    database_url = database_url + "?sslmode=require"
-elif "postgresql" in database_url and "?" in database_url:
-    database_url = database_url + "&sslmode=require"
+# Add SSL mode for Neon/Render PostgreSQL (avoid duplicate query parameters)
+if "postgresql" in database_url and "sslmode=" not in database_url:
+    if "?" in database_url:
+        database_url = database_url.rstrip("?") + "?sslmode=require" if database_url.endswith("?") else database_url + "&sslmode=require"
+    else:
+        database_url = database_url + "?sslmode=require"
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
