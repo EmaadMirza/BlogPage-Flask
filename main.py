@@ -288,7 +288,7 @@ def contact():
             return render_template("contact.html", msg_sent=False)
         
         try:
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as connection:
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as connection:
                 connection.login(email_address, email_password)
                 
                 msg = EmailMessage()
