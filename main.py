@@ -5,11 +5,10 @@ from flask_bootstrap import Bootstrap5
 from flask_ckeditor import CKEditor
 import hashlib
 import os
-import smtplib
+import resend
 from dotenv import load_dotenv
 import bleach
 import secrets
-from email.message import EmailMessage
 from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
@@ -279,35 +278,32 @@ def about():
 @app.route("/contact", methods=["GET", "POST"])
 def contact():
     if request.method == "POST":
+        resend.api_key = os.environ.get("RESEND_API_KEY")
         email_address = os.environ.get("EMAIL_ADDRESS")
-        email_password = os.environ.get("EMAIL_PASSWORD")
         
-        if not email_address or not email_password:
-            # If environment variables are missing on Render, flash an error and don't crash
+        if not resend.api_key or not email_address:
             flash("Error: Email credentials are not configured on the server.", "danger")
             return render_template("contact.html", msg_sent=False)
         
         try:
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as connection:
-                connection.login(email_address, email_password)
-                
-                msg = EmailMessage()
-                msg['Subject'] = f"New Message from {request.form.get('name')}"
-                msg['From'] = email_address
-                msg['To'] = email_address
-                msg.set_content(
+            params = {
+                "from": "Blog Contact Form <onboarding@resend.dev>",
+                "to": [email_address],
+                "subject": f"New Message from {request.form.get('name')}",
+                "text": (
                     f"Name: {request.form.get('name')}\n"
                     f"Email: {request.form.get('email')}\n"
                     f"Phone: {request.form.get('phone')}\n"
                     f"Message: {request.form.get('message')}"
                 )
-                connection.send_message(msg)
+            }
+            resend.Emails.send(params)
             
             flash("Successfully sent your message!", "success")
             return render_template("contact.html", msg_sent=True)
             
         except Exception as e:
-            # Catch SMTP login/connection errors
+            print(f"Resend Error: {e}")
             flash(f"Error sending email: {e}", "danger")
             return render_template("contact.html", msg_sent=False)
             
