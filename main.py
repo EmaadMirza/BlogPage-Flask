@@ -21,7 +21,8 @@ from forms import CreatePostForm , CommentForm , RegisterForm , LoginForm
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get("FLASK_KEY")
+# Add a fallback for SECRET_KEY so flash messages don't cause 500 errors if FLASK_KEY is missing
+app.config['SECRET_KEY'] = os.environ.get("FLASK_KEY", "8BYkEfBA6O6donzWlSihBXox7C0sKR6b")
 ckeditor = CKEditor(app)
 Bootstrap5(app)
 
@@ -276,6 +277,11 @@ def contact():
         email_address = os.environ.get("EMAIL_ADDRESS")
         email_password = os.environ.get("EMAIL_PASSWORD")
         
+        if not email_address or not email_password:
+            # If environment variables are missing on Render, flash an error and don't crash
+            flash("Error: Email credentials are not configured on the server.", "danger")
+            return render_template("contact.html", msg_sent=False)
+        
         try:
             with smtplib.SMTP_SSL("smtp.gmail.com", 465) as connection:
                 connection.login(email_address, email_password)
@@ -294,10 +300,14 @@ def contact():
             
             flash("Successfully sent your message!", "success")
             return render_template("contact.html", msg_sent=True)
+            
         except Exception as e:
-            flash(f"Error: {e}", "danger")
+            # Catch SMTP login/connection errors
+            flash(f"Error sending email: {e}", "danger")
+            return render_template("contact.html", msg_sent=False)
             
     return render_template("contact.html", msg_sent=False)
+
 
 
 if __name__ == "__main__":
