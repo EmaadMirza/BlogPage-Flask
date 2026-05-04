@@ -8,6 +8,7 @@ import os
 import smtplib
 from dotenv import load_dotenv
 import bleach
+from email.message import EmailMessage
 from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
@@ -271,38 +272,32 @@ def about():
 
 @app.route("/contact", methods=["GET", "POST"])
 def contact():
-    msg_sent = False
     if request.method == "POST":
-        name = request.form.get("name")
-        email = request.form.get("email")
-        phone = request.form.get("phone")
-        message = request.form.get("message")
-        
-        
         email_address = os.environ.get("EMAIL_ADDRESS")
         email_password = os.environ.get("EMAIL_PASSWORD")
-        if email_address and email_password:
-            try:
-                with smtplib.SMTP("smtp.gmail.com", 587) as connection:
-                    connection.ehlo()
-                    connection.starttls()
-                    connection.ehlo()
-                    connection.login(email_address, email_password)
-                    from email.message import EmailMessage
-                    em = EmailMessage()
-                    em['Subject'] = f"New Message from {name}"
-                    em['From'] = email_address
-                    em['To'] = email_address
-                    em.set_content(f"Name: {name}\nEmail: {email}\nPhone: {phone}\nMessage: {message}")
-                    connection.send_message(em)
-                flash("Successfully sent your message!", "success")
-                msg_sent = True
-            except Exception as e:
-                flash(f"Error sending message: {e}", "danger")
-        else:
-            flash("Email credentials not configured in .env", "danger")
-        return render_template("contact.html", msg_sent=msg_sent)
-    return render_template("contact.html", msg_sent=msg_sent)
+        
+        try:
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as connection:
+                connection.login(email_address, email_password)
+                
+                msg = EmailMessage()
+                msg['Subject'] = f"New Message from {request.form.get('name')}"
+                msg['From'] = email_address
+                msg['To'] = email_address
+                msg.set_content(
+                    f"Name: {request.form.get('name')}\n"
+                    f"Email: {request.form.get('email')}\n"
+                    f"Phone: {request.form.get('phone')}\n"
+                    f"Message: {request.form.get('message')}"
+                )
+                connection.send_message(msg)
+            
+            flash("Successfully sent your message!", "success")
+            return render_template("contact.html", msg_sent=True)
+        except Exception as e:
+            flash(f"Error: {e}", "danger")
+            
+    return render_template("contact.html", msg_sent=False)
 
 
 if __name__ == "__main__":
