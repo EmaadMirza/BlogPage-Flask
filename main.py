@@ -8,6 +8,7 @@ import os
 import smtplib
 from dotenv import load_dotenv
 import bleach
+import secrets
 from email.message import EmailMessage
 from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
@@ -21,7 +22,8 @@ from forms import CreatePostForm , CommentForm , RegisterForm , LoginForm
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get("FLASK_KEY")
+# Secure fallback: If FLASK_KEY is missing, generate a random one to prevent the app from crashing during flash messages.
+app.config['SECRET_KEY'] = os.environ.get("FLASK_KEY") or secrets.token_hex(24)
 ckeditor = CKEditor(app)
 Bootstrap5(app)
 
