@@ -21,8 +21,7 @@ from forms import CreatePostForm , CommentForm , RegisterForm , LoginForm
 load_dotenv()
 
 app = Flask(__name__)
-# Add a fallback for SECRET_KEY so flash messages don't cause 500 errors if FLASK_KEY is missing
-app.config['SECRET_KEY'] = os.environ.get("FLASK_KEY", "8BYkEfBA6O6donzWlSihBXox7C0sKR6b")
+app.config['SECRET_KEY'] = os.environ.get("FLASK_KEY")
 ckeditor = CKEditor(app)
 Bootstrap5(app)
 
